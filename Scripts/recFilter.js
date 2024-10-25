@@ -24,7 +24,6 @@
 
     // Load user settings or defaults
     const settings = {
-		alert('Enter hex code values for button colors. (https://htmlcolorcodes.com)');
         hideUnownedColorActive: GM_getValue('hideUnownedColorActive', '#00448e'),
         hideUnownedColorInactive: GM_getValue('hideUnownedColorInactive', '#007bff'),
         hideInDeckColorActive: GM_getValue('hideInDeckColorActive', '#ad1221'),
@@ -33,6 +32,7 @@
 
     // Function to open settings prompt
     function openSettings() {
+		alert('Enter hex code values for button colors. (https://htmlcolorcodes.com)');
         settings.hideUnownedColorInactive = prompt('Set Hide Unowned (Inactive) color:', settings.hideUnownedColorInactive) || settings.hideUnownedColorInactive;
         settings.hideUnownedColorActive = prompt('Set Hide Unowned (Active) color:', settings.hideUnownedColorActive) || settings.hideUnownedColorActive;
         settings.hideInDeckColorInactive = prompt('Set Hide in Deck (Inactive) color:', settings.hideInDeckColorInactive) || settings.hideInDeckColorInactive;
