@@ -1,96 +1,79 @@
 // ==UserScript==
-// @name         Clone and Move Dropdown with Trigger Click
+// @name         Archidekt Deck Menu Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      1.6
-// @description  Clone .accountDropdown_deckList__xlqcq to a new menu button in .globalToolbar_desktopOptions____6Sw, and click a trigger before cloning
-// @match        https://archidekt.com/*
+// @version      1.7
+// @description  Clone the deck list from the profile dropdown into its own menu. Expand the height and width as well.
 // @author       DrakeWood
+// @license      GPL-3.0
+// @icon         https://archidekt.com/favicon.ico
+// @homepage     https://github.com/DrakeWood/Archidekt-Tools
+// @supportURL   https://github.com/DrakeWood/Archidekt-Tools/issues
+// @updateURL    https://github.com/DrakeWood/Archidekt-Tools/raw/refs/heads/master/Scripts/deckDropdown.js
+// @downloadURL  https://github.com/DrakeWood/Archidekt-Tools/raw/refs/heads/master/Scripts/deckDropdown.js
+// @match        https://archidekt.com/*
 // @run-at       document-idle
-// @grant        none
+// @grant        GM_addStyle
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    let hasClickedOnce = false; // To track if the dropdown button has been clicked once
+    let hasClickedOnce = false;
 
-    // Function to create the new button and clone the dropdown menu
+    // Initialize the button and menu styling
+    function init() {
+        createMenuButton();
+        addStyles();
+    }
+
+    // Create the new dropdown button
     function createMenuButton() {
-        // Step 1: Find the toolbar element where the new button will be added
-        let toolbar = document.querySelector('.globalToolbar_desktopOptions____6Sw');
+        const toolbar = document.querySelector('.globalToolbar_desktopOptions____6Sw');
         if (toolbar && !document.querySelector('.custom-menu-button')) {
-            // Create a new button
-            let newButton = document.createElement('button');
-            newButton.textContent = 'New Dropdown';
+            const newButton = document.createElement('button');
+            newButton.textContent = 'My Decks';
             newButton.classList.add('custom-menu-button');
-
-            // Append the new button to the toolbar
             toolbar.appendChild(newButton);
 
-            // Add click event to the new button
             newButton.addEventListener('click', () => {
-                if (!hasClickedOnce) {
-                    hasClickedOnce = true;
-                    triggerAccountDropdownAndCloneMenu(newButton);
-                } else {
-                    toggleClonedMenu(newButton); // Toggle the cloned menu on subsequent clicks
-                }
+                hasClickedOnce ? toggleClonedMenu(newButton) : triggerAccountDropdownAndCloneMenu(newButton);
+                hasClickedOnce = true; // Set to true after the first click
             });
-
-            // Add styles for the new button
-            addStyles();
         }
     }
 
-    // Function to simulate focus and click on the dropdown trigger and clone the dropdown menu
+    // Trigger the dropdown and clone the menu
     async function triggerAccountDropdownAndCloneMenu(button) {
-        // Step 1: Find and click the .archidektDropdown_trigger__Wdtom button
-        let dropdownTrigger = document.querySelector('.accountDropdown_dropdownTrigger__s7J5O');
-        let originalMenu = document.querySelector('.accountDropdown_dropdownMenu__33gJI');
+        const dropdownTrigger = document.querySelector('.accountDropdown_dropdownTrigger__s7J5O');
+        const originalMenu = document.querySelector('.accountDropdown_dropdownMenu__33gJI');
 
         if (dropdownTrigger && originalMenu) {
-            dropdownTrigger.focus(); // Focus the dropdown trigger
-            originalMenu.style.display = 'none'; // Hide the original menu
-            dropdownTrigger.click(); // Simulate a click
+            dropdownTrigger.focus();
+            originalMenu.style.display = 'none';
+            dropdownTrigger.click();
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Wait for the menu to load
-            await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 2 seconds to allow the menu to load
-
-            let dropdownMenu = document.querySelector('.accountDropdown_deckList__xlqcq');
+            const dropdownMenu = document.querySelector('.accountDropdown_deckList__xlqcq');
             if (dropdownMenu) {
-                let clonedMenu = dropdownMenu.cloneNode(true); // Clone the dropdown
-                clonedMenu.classList.add('cloned-menu'); // Add a class for further control
-
-                // Append the cloned menu to the button
+                const clonedMenu = dropdownMenu.cloneNode(true);
+                clonedMenu.classList.add('cloned-menu');
                 button.appendChild(clonedMenu);
-
-                // Show the cloned menu
                 clonedMenu.style.display = 'block';
-
-                // Unhide the original menu after cloning
-                dropdownTrigger.focus(); // Focus the dropdown trigger
-                dropdownTrigger.click(); // Simulate a click
+                dropdownTrigger.click(); // Hide original menu again
                 originalMenu.style.display = '';
             }
         }
     }
 
-    // Function to toggle the cloned menu display
+    // Toggle visibility of the cloned menu
     function toggleClonedMenu(button) {
-        let clonedMenu = button.querySelector('.cloned-menu');
-        if (clonedMenu) {
-            if (clonedMenu.style.display === 'none') {
-                clonedMenu.style.display = 'block'; // Show menu
-            } else {
-                clonedMenu.style.display = 'none'; // Hide menu
-            }
-        }
+        const clonedMenu = button.querySelector('.cloned-menu');
+        clonedMenu.style.display = clonedMenu.style.display === 'none' ? 'block' : 'none';
     }
 
-    // Function to add custom CSS for the new button and dropdown
+    // Add custom CSS styles
     function addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
+        GM_addStyle(`
             .custom-menu-button {
                 background-color: #007bff;
                 color: white;
@@ -100,34 +83,41 @@
                 position: relative;
             }
             .custom-menu-button:hover {
-                background-color: #0056b3;
+                background-color: transparent;
             }
             .cloned-menu {
                 display: none;
                 position: absolute;
-                background-color: white;
+                background-color: var(--alt-background) !important;
+                color: #e3e3e3 !important;
+                width: 300px !important;
+                max-height: 900px !important;
                 border: 1px solid #ccc;
-                padding: 10px;
-                width: 200px;
                 z-index: 1000;
-                top: 100%; /* Position it below the button */
+                top: 100%;
                 left: 0;
             }
-        `;
-        document.head.appendChild(style);
+            .cloned-menu:hover {
+            width: 300px !important;
+            background-color: var(--alt-background) !important;
+            color: #e3e3e3 !important;
+        }
+            .accountDropdown_deckList__xlqcq {
+                max-height: 515px;
+            }
+            .accountDropdown_dropdownMenu__33gJI {
+                width: 300px;
+                left: -150px;
+            }
+        `);
     }
 
-    // MutationObserver to handle dynamic content loading
+    // MutationObserver for dynamic content
     const observer = new MutationObserver(() => {
         createMenuButton();
     });
-
-    // Observe changes in the body or specific container if content is loaded dynamically
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Initial attempt to create the menu button on page load
-    window.addEventListener('load', () => {
-        createMenuButton();
-    });
-
+    // Initialize on page load
+    window.addEventListener('load', init);
 })();
