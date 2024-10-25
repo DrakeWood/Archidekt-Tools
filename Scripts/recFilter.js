@@ -1,106 +1,113 @@
 // ==UserScript==
-// @name         Hide Cards Based on Ownership
+// @name         Archidekt EDHREC Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      1.4
-// @description  Hides specific cards based on ownership titles in a card results grid.
+// @version      1.6
+// @description  Adds 2 toggles for deck recommendations with customizable colors and an on/off toggle.
+//               - Hide Unowned: Removes cards not in your collection.
+//               - Hide already in Deck: Removes cards already in the deck list.
 // @author       DrakeWood
+// @license      GPL-3.0
+// @icon         https://archidekt.com/favicon.ico
+// @homepage     https://github.com/DrakeWood/Archidekt-Tools
+// @supportURL   https://github.com/DrakeWood/Archidekt-Tools/issues
+// @updateURL    https://github.com/DrakeWood/Archidekt-Tools/raw/refs/heads/master/Scripts/recFilter.js
+// @downloadURL  https://github.com/DrakeWood/Archidekt-Tools/raw/refs/heads/master/Scripts/recFilter.js
 // @match        https://archidekt.com/*
-// @grant        none
+// @run-at       document-idle
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    // Function to create and insert the filter buttons
-    function createButtons() {
-        // Create a button for filtering unowned cards
-        const filterUnownedButton = document.createElement('button');
-        filterUnownedButton.textContent = 'Filter Unowned';
-        filterUnownedButton.style.margin = '10px';
-        filterUnownedButton.style.padding = '5px 10px';
-        filterUnownedButton.style.cursor = 'pointer';
-        filterUnownedButton.style.backgroundColor = '#007bff'; // Bootstrap blue
-        filterUnownedButton.style.color = 'white';
-        filterUnownedButton.style.border = 'none';
-        filterUnownedButton.style.borderRadius = '4px';
+    // Load user settings or defaults
+    const settings = {
+		alert('Enter hex code values for button colors. (https://htmlcolorcodes.com)');
+        hideUnownedColorActive: GM_getValue('hideUnownedColorActive', '#00448e'),
+        hideUnownedColorInactive: GM_getValue('hideUnownedColorInactive', '#007bff'),
+        hideInDeckColorActive: GM_getValue('hideInDeckColorActive', '#ad1221'),
+        hideInDeckColorInactive: GM_getValue('hideInDeckColorInactive', '#dc3545'),
+    };
 
-        // Create a button for hiding cards in deck
-        const filterInDeckButton = document.createElement('button');
-        filterInDeckButton.textContent = 'Hide in Deck';
-        filterInDeckButton.style.margin = '10px';
-        filterInDeckButton.style.padding = '5px 10px';
-        filterInDeckButton.style.cursor = 'pointer';
-        filterInDeckButton.style.backgroundColor = '#dc3545'; // Bootstrap red
-        filterInDeckButton.style.color = 'white';
-        filterInDeckButton.style.border = 'none';
-        filterInDeckButton.style.borderRadius = '4px';
+    // Function to open settings prompt
+    function openSettings() {
+        settings.hideUnownedColorInactive = prompt('Set Hide Unowned (Inactive) color:', settings.hideUnownedColorInactive) || settings.hideUnownedColorInactive;
+        settings.hideUnownedColorActive = prompt('Set Hide Unowned (Active) color:', settings.hideUnownedColorActive) || settings.hideUnownedColorActive;
+        settings.hideInDeckColorInactive = prompt('Set Hide in Deck (Inactive) color:', settings.hideInDeckColorInactive) || settings.hideInDeckColorInactive;
+        settings.hideInDeckColorActive = prompt('Set Hide in Deck (Active) color:', settings.hideInDeckColorActive) || settings.hideInDeckColorActive;
 
-        // Function to update card visibility based on both filters
-        function updateCardVisibility() {
-            const cards = document.querySelectorAll('.searchedCard_card__FCDQJ');
-            const shouldHideUnowned = filterUnownedButton.classList.contains('active');
-            const shouldHideInDeck = filterInDeckButton.classList.contains('active');
+        // Save settings
+        GM_setValue('hideUnownedColorActive', settings.hideUnownedColorActive);
+        GM_setValue('hideUnownedColorInactive', settings.hideUnownedColorInactive);
+        GM_setValue('hideInDeckColorActive', settings.hideInDeckColorActive);
+        GM_setValue('hideInDeckColorInactive', settings.hideInDeckColorInactive);
 
-            cards.forEach(card => {
-                const button = card.querySelector('.searchedCard_cardButton__auumJ');
-				const cornerOwned = button.querySelector('.cornerOwned_container___Lab0');
-				let title = "";
-                    if (cornerOwned) {
-                        title = cornerOwned.getAttribute('title')?.trim(); // Get the title attribute
-                    }
-                const quantityButton = card.querySelector('.searchedCard_quantity__CAZ83');
-                const additionalElement = card.querySelector(".searchedCard_hasOtherPrintingQuantity__GUqNR");
-
-                const quantity = quantityButton ? parseInt(quantityButton.textContent.trim(), 10) : 0;
-
-                // Determine if the card should be hidden
-                const hideCard = (shouldHideUnowned && (!title ||
-                        (title !== "Owns exact printing" && title !== "Owns other printing"))) ||
-                (shouldHideInDeck && (quantity > 0 || additionalElement));
-
-                card.style.display = hideCard ? 'none' : ''; // Show or hide card
-            });
-        }
-
-        // Function to toggle filter for unowned cards
-        function toggleCardsVisibility() {
-            filterUnownedButton.classList.toggle('active'); // Toggle active class
-            filterUnownedButton.style.backgroundColor = filterUnownedButton.classList.contains('active') ? '#0056b3' : '#007bff'; // Change color to indicate status
-            updateCardVisibility(); // Update card visibility
-        }
-
-        // Function to toggle filter for cards in deck
-        function toggleDeckVisibility() {
-            filterInDeckButton.classList.toggle('active'); // Toggle active class
-            filterInDeckButton.style.backgroundColor = filterInDeckButton.classList.contains('active') ? '#c82333' : '#dc3545'; // Change color to indicate status
-            updateCardVisibility(); // Update card visibility
-        }
-
-        // Append buttons to the desired location
-        const formElement = document.querySelector("#global-search-panel > div.globalOverlayStack_content__nY2ZF.globalOverlayStack_visable__r47VO > div > div.searchV2_tabLine__NVl5w");
-        if (formElement) {
-            formElement.appendChild(filterUnownedButton);
-            formElement.appendChild(filterInDeckButton);
-        }
-
-        // Add event listeners to the buttons
-        filterUnownedButton.addEventListener('click', toggleCardsVisibility);
-        filterInDeckButton.addEventListener('click', toggleDeckVisibility);
+        alert('Settings saved! Please refresh the page.');
     }
 
-    // Wait for the lock button to appear
-    const observer = new MutationObserver(() => {
-        const lockButton = document.querySelector("#global-search-panel > div.globalOverlayStack_content__nY2ZF.globalOverlayStack_visable__r47VO > div > button.searchV2_lockButton__dHWB_");
-        if (lockButton) {
-            createButtons(); // Call function to create and insert the filter buttons
-            observer.disconnect(); // Stop observing after adding the buttons
+    // Register the settings menu command in Tampermonkey
+    GM_registerMenuCommand('Customize Button Colors', openSettings);
+
+    // Create a styled button element
+    function createButton(text, color) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        Object.assign(button.style, {
+            margin: '10px',
+            padding: '5px 10px',
+            cursor: 'pointer',
+            backgroundColor: color,
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px'
+        });
+        return button;
+    }
+
+    // Function to update card visibility based on active filters
+    function updateCardVisibility(shouldHideUnowned, shouldHideInDeck) {
+        document.querySelectorAll('.searchedCard_card__FCDQJ').forEach(card => {
+            const title = card.querySelector('.cornerOwned_container___Lab0')?.getAttribute('title')?.trim();
+            const quantity = parseInt(card.querySelector('.searchedCard_quantity__CAZ83')?.textContent.trim(), 10) || 0;
+            const inDeck = quantity > 0 || card.querySelector(".searchedCard_hasOtherPrintingQuantity__GUqNR");
+
+            const hideCard = (shouldHideUnowned && (!title || (title !== "Owns exact printing" && title !== "Owns other printing")))
+                            || (shouldHideInDeck && inDeck);
+
+            card.style.display = hideCard ? 'none' : '';
+        });
+    }
+
+    // Initialize filter buttons and append to toolbar
+    function createButtons() {
+        const hideUnownedButton = createButton('Hide Unowned', settings.hideUnownedColorInactive);
+        const hideInDeckButton = createButton('Hide already in Deck', settings.hideInDeckColorInactive);
+        const formElement = document.querySelector("#global-search-panel .searchV2_tabLine__NVl5w");
+
+        if (formElement) {
+            formElement.append(hideUnownedButton, hideInDeckButton);
+
+            hideUnownedButton.addEventListener('click', () => {
+                const active = hideUnownedButton.classList.toggle('active');
+                hideUnownedButton.style.backgroundColor = active ? settings.hideUnownedColorActive : settings.hideUnownedColorInactive;
+                updateCardVisibility(active, hideInDeckButton.classList.contains('active'));
+            });
+
+            hideInDeckButton.addEventListener('click', () => {
+                const active = hideInDeckButton.classList.toggle('active');
+                hideInDeckButton.style.backgroundColor = active ? settings.hideInDeckColorActive : settings.hideInDeckColorInactive;
+                updateCardVisibility(hideUnownedButton.classList.contains('active'), active);
+            });
         }
-    });
+    }
 
-    // Start observing the body for changes
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
+    // Observe dynamic content and create buttons once loaded
+    new MutationObserver((_, observer) => {
+        if (document.querySelector(".searchV2_lockButton__dHWB_")) {
+            createButtons();
+            observer.disconnect();
+        }
+    }).observe(document.body, { childList: true, subtree: true });
 })();
