@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Archidekt Dropdown Menu Enhancer
+// @name         Archidekt Deck Menu Enhancer
 // @namespace    http://tampermonkey.net/
 // @version      1.7
 // @description  Clone the deck list from the profile dropdown into its own menu. Expand the height and width as well.
