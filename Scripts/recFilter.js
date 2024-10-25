@@ -1,10 +1,8 @@
 // ==UserScript==
 // @name         Archidekt EDHREC Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      1.6
-// @description  Adds 2 toggles for deck recommendations with customizable colors and an on/off toggle.
-//               - Hide Unowned: Removes cards not in your collection.
-//               - Hide already in Deck: Removes cards already in the deck list.
+// @version      1.8
+// @description  Adds toggles for hiding unowned cards and cards already in the deck, with customizable colors.
 // @author       DrakeWood
 // @license      GPL-3.0
 // @icon         https://archidekt.com/favicon.ico
@@ -23,28 +21,80 @@
     'use strict';
 
     // Load user settings or defaults
-    const settings = {
-        hideUnownedColorActive: GM_getValue('hideUnownedColorActive', '#00448e'),
-        hideUnownedColorInactive: GM_getValue('hideUnownedColorInactive', '#007bff'),
-        hideInDeckColorActive: GM_getValue('hideInDeckColorActive', '#ad1221'),
-        hideInDeckColorInactive: GM_getValue('hideInDeckColorInactive', '#dc3545'),
+    const defaultSettings = {
+        hideUnownedColorActive: '#00448e',
+        hideUnownedColorInactive: '#007bff',
+        hideInDeckColorActive: '#ad1221',
+        hideInDeckColorInactive: '#dc3545',
     };
 
-    // Function to open settings prompt
+    const settings = {
+        hideUnownedColorActive: GM_getValue('hideUnownedColorActive', defaultSettings.hideUnownedColorActive),
+        hideUnownedColorInactive: GM_getValue('hideUnownedColorInactive', defaultSettings.hideUnownedColorInactive),
+        hideInDeckColorActive: GM_getValue('hideInDeckColorActive', defaultSettings.hideInDeckColorActive),
+        hideInDeckColorInactive: GM_getValue('hideInDeckColorInactive', defaultSettings.hideInDeckColorInactive),
+    };
+
+    // Function to open settings modal
     function openSettings() {
-		alert('Enter hex code values for button colors. (https://htmlcolorcodes.com)');
-        settings.hideUnownedColorInactive = prompt('Set Hide Unowned (Inactive) color:', settings.hideUnownedColorInactive) || settings.hideUnownedColorInactive;
-        settings.hideUnownedColorActive = prompt('Set Hide Unowned (Active) color:', settings.hideUnownedColorActive) || settings.hideUnownedColorActive;
-        settings.hideInDeckColorInactive = prompt('Set Hide in Deck (Inactive) color:', settings.hideInDeckColorInactive) || settings.hideInDeckColorInactive;
-        settings.hideInDeckColorActive = prompt('Set Hide in Deck (Active) color:', settings.hideInDeckColorActive) || settings.hideInDeckColorActive;
+        const modalHTML = `
+            <div id="settingsModal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #007bff; padding: 20px; border: 2px solid #ccc; z-index: 10000;">
+                <h2>Customize Button Colors</h2>
+                <label for="unownedActive">Hide Unowned (Active):</label>
+                <input type="text" id="unownedActive" value="${settings.hideUnownedColorActive}" placeholder="#hexcode" /><br><br>
+                <label for="unownedInactive">Hide Unowned (Inactive):</label>
+                <input type="text" id="unownedInactive" value="${settings.hideUnownedColorInactive}" placeholder="#hexcode" /><br><br>
+                <label for="inDeckActive">Hide in Deck (Active):</label>
+                <input type="text" id="inDeckActive" value="${settings.hideInDeckColorActive}" placeholder="#hexcode" /><br><br>
+                <label for="inDeckInactive">Hide in Deck (Inactive):</label>
+                <input type="text" id="inDeckInactive" value="${settings.hideInDeckColorInactive}" placeholder="#hexcode" /><br><br>
+                <button id="saveSettings">Save</button>
+                <button id="resetDefaults">Reset Defaults</button>
+                <button id="closeModal">Close</button>
+            </div>
+            <div id="modalOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999;"></div>
+        `;
+
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = modalHTML;
+        document.body.appendChild(modalContainer);
 
         // Save settings
-        GM_setValue('hideUnownedColorActive', settings.hideUnownedColorActive);
-        GM_setValue('hideUnownedColorInactive', settings.hideUnownedColorInactive);
-        GM_setValue('hideInDeckColorActive', settings.hideInDeckColorActive);
-        GM_setValue('hideInDeckColorInactive', settings.hideInDeckColorInactive);
+        document.getElementById('saveSettings').addEventListener('click', () => {
+            settings.hideUnownedColorActive = document.getElementById('unownedActive').value;
+            settings.hideUnownedColorInactive = document.getElementById('unownedInactive').value;
+            settings.hideInDeckColorActive = document.getElementById('inDeckActive').value;
+            settings.hideInDeckColorInactive = document.getElementById('inDeckInactive').value;
 
-        alert('Settings saved! Please refresh the page.');
+            // Save settings
+            GM_setValue('hideUnownedColorActive', settings.hideUnownedColorActive);
+            GM_setValue('hideUnownedColorInactive', settings.hideUnownedColorInactive);
+            GM_setValue('hideInDeckColorActive', settings.hideInDeckColorActive);
+            GM_setValue('hideInDeckColorInactive', settings.hideInDeckColorInactive);
+
+            alert('Settings saved! Please refresh the page.');
+            closeModal(modalContainer);
+        });
+
+        // Reset defaults
+        document.getElementById('resetDefaults').addEventListener('click', () => {
+            GM_setValue('hideUnownedColorActive', defaultSettings.hideUnownedColorActive);
+            GM_setValue('hideUnownedColorInactive', defaultSettings.hideUnownedColorInactive);
+            GM_setValue('hideInDeckColorActive', defaultSettings.hideInDeckColorActive);
+            GM_setValue('hideInDeckColorInactive', defaultSettings.hideInDeckColorInactive);
+            alert('Defaults reset! Please refresh the page.');
+            closeModal(modalContainer);
+        });
+
+        // Close modal
+        document.getElementById('closeModal').addEventListener('click', () => {
+            closeModal(modalContainer);
+        });
+    }
+
+    // Function to close modal
+    function closeModal(modalContainer) {
+        modalContainer.remove();
     }
 
     // Register the settings menu command in Tampermonkey
